@@ -124,7 +124,7 @@
       </div>
 
       <!-- Quick Summary Footer in Sidebar -->
-      <div class="border-t border-slate-800/80 pt-6">
+      <div class="border-t border-slate-800/80 pt-6 space-y-4">
         <div class="bg-slate-900/60 rounded-xl p-4 border border-slate-800/40">
           <div class="flex items-center justify-between mb-1">
             <span class="text-xs text-slate-400">Total Net Profit</span>
@@ -132,6 +132,11 @@
           </div>
           <p id="sidebar-net-profit" class="text-lg font-bold font-outfit text-white">Rs. 0.00</p>
         </div>
+        
+        <!-- Direct Sidebar Footer Logout Button -->
+        <button onclick="logoutOwner()" class="w-full py-2.5 bg-slate-950 hover:bg-rose-950/20 text-rose-400 hover:text-rose-300 border border-slate-800/80 hover:border-rose-900/30 font-semibold rounded-xl text-xs transition duration-300 flex items-center justify-center gap-2 cursor-pointer">
+          <i class="fa-solid fa-right-from-bracket"></i> Logout Portal
+        </button>
       </div>
     </aside>
 
