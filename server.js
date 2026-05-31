@@ -30,13 +30,23 @@ mongoose.connect(process.env.MONGODB_URI)
     console.log('✅ Connected to MongoDB Atlas successfully.');
     dbConnected = true;
     try {
-      const pwExists = await AdminSetting.findOne({ key: 'admin_password' });
-      if (!pwExists) {
-        await AdminSetting.create({ key: 'admin_password', value: 'gk2026' });
-        console.log('🔑 Seeded default admin password (gk2026).');
+      // Migrate legacy password if present
+      const legacyPw = await AdminSetting.findOne({ key: 'admin_password' });
+      
+      const gkPwExists = await AdminSetting.findOne({ key: 'password_gk' });
+      if (!gkPwExists) {
+        const gkVal = legacyPw ? legacyPw.value : 'gk2026';
+        await AdminSetting.create({ key: 'password_gk', value: gkVal });
+        console.log('🔑 Seeded/Migrated GK admin password.');
+      }
+
+      const lmPwExists = await AdminSetting.findOne({ key: 'password_lm' });
+      if (!lmPwExists) {
+        await AdminSetting.create({ key: 'password_lm', value: 'lm2026' });
+        console.log('🔑 Seeded default LM partner password (lm2026).');
       }
     } catch (err) {
-      console.error('⚠️ Error seeding admin password:', err.message);
+      console.error('⚠️ Error seeding admin passwords:', err.message);
     }
   })
   .catch((err) => {
@@ -55,13 +65,13 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// GET all bikes (with filtering and search)
+// GET all bikes (with filtering, search, and owner-specific routing)
 app.get('/api/bikes', async (req, res) => {
   if (!dbConnected) {
     return res.status(503).json({ error: 'Database not connected. Please check your .env configuration.' });
   }
   try {
-    const { status, search } = req.query;
+    const { status, search, owner } = req.query;
     let query = {};
 
     if (status && status !== 'All') {
@@ -76,8 +86,41 @@ app.get('/api/bikes', async (req, res) => {
       ];
     }
 
+    // If an owner is specified, filter by it. Otherwise, return all (for the public showroom)
+    if (owner && owner !== 'undefined') {
+      query.owner = owner;
+    }
+
     const bikes = await Bike.find(query).sort({ createdAt: -1 });
-    res.json(bikes);
+
+    // For public calls (no specific owner filter, or when displaying items on landing page),
+    // we want to attach the respective owner's phone, email, and business name to each bike.
+    let profiles = {
+      gk: { phone: '+94 77 123 4567', email: 'owner@gkmotorcycle.com', address: 'Colombo, Sri Lanka', business: 'GK Motorcycle' },
+      lm: { phone: '+94 77 987 6543', email: 'lakindu@gkmotorcycle.com', address: 'Colombo, Sri Lanka', business: 'LM Supermoto' }
+    };
+
+    if (dbConnected) {
+      const profGk = await AdminSetting.findOne({ key: 'profile_gk' });
+      if (profGk) profiles.gk = JSON.parse(profGk.value);
+      
+      const profLm = await AdminSetting.findOne({ key: 'profile_lm' });
+      if (profLm) profiles.lm = JSON.parse(profLm.value);
+    }
+
+    const bikesWithProfiles = bikes.map(b => {
+      const bikeOwner = b.owner || 'gk';
+      const profile = profiles[bikeOwner] || profiles.gk;
+      return {
+        ...b.toObject(),
+        ownerPhone: profile.phone,
+        ownerEmail: profile.email,
+        ownerAddress: profile.address,
+        ownerBusiness: profile.business
+      };
+    });
+
+    res.json(bikesWithProfiles);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -94,6 +137,9 @@ app.post('/api/bikes', async (req, res) => {
     if (!bikeData.purchaseDate) {
       bikeData.purchaseDate = new Date();
     }
+    // Set owner
+    bikeData.owner = req.query.owner || 'gk';
+
     const newBike = new Bike(bikeData);
     await newBike.save();
     res.status(201).json(newBike);
@@ -161,16 +207,17 @@ app.delete('/api/bikes/:id', async (req, res) => {
   }
 });
 
-// GET - Analytics Dashboard calculations
+// GET - Analytics Dashboard calculations (Filtered by owner)
 app.get('/api/analytics', async (req, res) => {
   if (!dbConnected) {
     return res.status(503).json({ error: 'Database not connected.' });
   }
   try {
-    const bikes = await Bike.find({});
+    const owner = req.query.owner || 'gk';
+    const bikes = await Bike.find({ owner });
 
     // Capital pool calculation
-    const capitalEntries = await CapitalEntry.find().sort({ addedAt: -1 });
+    const capitalEntries = await CapitalEntry.find({ owner }).sort({ addedAt: -1 });
     const totalCapitalAdded = capitalEntries.reduce((s, e) => s + e.amount, 0);
     const totalBuyingCostAllBikes = bikes.reduce((s, b) => s + (b.buyingPrice || 0), 0);
     const capitalSummary = {
@@ -270,14 +317,15 @@ app.get('/api/analytics', async (req, res) => {
 
 // ── CAPITAL POOL ROUTES ──────────────────────────────────────────────────────
 
-// GET - Capital pool summary
+// GET - Capital pool summary (Filtered by owner)
 app.get('/api/capital', async (req, res) => {
   if (!dbConnected) {
     return res.status(503).json({ error: 'Database not connected.' });
   }
   try {
-    const entries = await CapitalEntry.find().sort({ addedAt: -1 });
-    const bikes = await Bike.find();
+    const owner = req.query.owner || 'gk';
+    const entries = await CapitalEntry.find({ owner }).sort({ addedAt: -1 });
+    const bikes = await Bike.find({ owner });
     const totalCapital = entries.reduce((s, e) => s + e.amount, 0);
     const capitalUsed = bikes.reduce((s, b) => s + (b.buyingPrice || 0), 0);
     const remainingCash = totalCapital - capitalUsed;
@@ -287,7 +335,7 @@ app.get('/api/capital', async (req, res) => {
   }
 });
 
-// POST - Add capital injection
+// POST - Add capital injection (Filtered by owner)
 app.post('/api/capital', async (req, res) => {
   if (!dbConnected) {
     return res.status(503).json({ error: 'Database not connected.' });
@@ -297,10 +345,12 @@ app.post('/api/capital', async (req, res) => {
     return res.status(400).json({ error: 'A valid positive amount is required.' });
   }
   try {
+    const owner = req.query.owner || 'gk';
     const entry = await CapitalEntry.create({
       amount: Number(amount),
       note: note || '',
-      addedAt: new Date()
+      addedAt: new Date(),
+      owner
     });
     res.status(201).json(entry);
   } catch (err) {
@@ -345,7 +395,68 @@ app.put('/api/capital/:id', async (req, res) => {
 
 // ── END CAPITAL POOL ROUTES ──────────────────────────────────────────────────
 
-// POST - Verify admin password
+// GET - profile settings for a specific owner ('gk' or 'lm')
+app.get('/api/profile', async (req, res) => {
+  if (!dbConnected) {
+    return res.status(503).json({ error: 'Database not connected.' });
+  }
+  const owner = req.query.owner || 'gk';
+  try {
+    const key = `profile_${owner}`;
+    const setting = await AdminSetting.findOne({ key });
+    if (setting) {
+      res.json(JSON.parse(setting.value));
+    } else {
+      // Fallback default profile data
+      const defaultProfiles = {
+        gk: {
+          name: 'GK Motorcycle Administrator',
+          business: 'GK Motorcycle',
+          phone: '+94 77 123 4567',
+          email: 'admin@gkmotorcycle.com',
+          address: 'Colombo, Sri Lanka',
+          avatar: 'sports'
+        },
+        lm: {
+          name: 'Lakindu Motorcycle Proprietor',
+          business: 'LM Supermoto',
+          phone: '+94 77 987 6543',
+          email: 'lakindu@gkmotorcycle.com',
+          address: 'Colombo, Sri Lanka',
+          avatar: 'adventure'
+        }
+      };
+      res.json(defaultProfiles[owner] || defaultProfiles.gk);
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST - save profile settings for a specific owner ('gk' or 'lm')
+app.post('/api/profile', async (req, res) => {
+  if (!dbConnected) {
+    return res.status(503).json({ error: 'Database not connected.' });
+  }
+  const owner = req.query.owner || 'gk';
+  try {
+    const key = `profile_${owner}`;
+    const value = JSON.stringify(req.body);
+    
+    let setting = await AdminSetting.findOne({ key });
+    if (setting) {
+      setting.value = value;
+      await setting.save();
+    } else {
+      setting = await AdminSetting.create({ key, value });
+    }
+    res.json({ success: true, profile: req.body });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST - Verify admin password (GK or LM)
 app.post('/api/admin/login', async (req, res) => {
   const { password } = req.body;
   if (!password) {
@@ -353,16 +464,32 @@ app.post('/api/admin/login', async (req, res) => {
   }
 
   try {
-    let actualPassword = 'gk2026';
+    // 1. Fetch passwords from DB
+    let gkPassword = 'gk2026';
+    let lmPassword = 'lm2026';
+
     if (dbConnected) {
-      const setting = await AdminSetting.findOne({ key: 'admin_password' });
-      if (setting) {
-        actualPassword = setting.value;
+      // GK Password: try legacy 'admin_password' first, then 'password_gk'
+      const legacySetting = await AdminSetting.findOne({ key: 'admin_password' });
+      const gkSetting = await AdminSetting.findOne({ key: 'password_gk' });
+      if (gkSetting) {
+        gkPassword = gkSetting.value;
+      } else if (legacySetting) {
+        gkPassword = legacySetting.value;
+      }
+
+      // LM Password
+      const lmSetting = await AdminSetting.findOne({ key: 'password_lm' });
+      if (lmSetting) {
+        lmPassword = lmSetting.value;
       }
     }
 
-    if (password === actualPassword) {
-      return res.json({ success: true, token: 'gk_admin_session_' + Date.now() });
+    // 2. Validate
+    if (password === gkPassword) {
+      return res.json({ success: true, token: 'admin_session_gk_' + Date.now(), owner: 'gk' });
+    } else if (password === lmPassword) {
+      return res.json({ success: true, token: 'admin_session_lm_' + Date.now(), owner: 'lm' });
     } else {
       return res.status(401).json({ error: 'Incorrect password' });
     }
@@ -371,21 +498,37 @@ app.post('/api/admin/login', async (req, res) => {
   }
 });
 
-// POST - Change admin password
+// POST - Change admin password (for specific owner)
 app.post('/api/admin/change-password', async (req, res) => {
   const { currentPassword, newPassword } = req.body;
+  const owner = req.query.owner || 'gk';
+  
   if (!currentPassword || !newPassword) {
     return res.status(400).json({ error: 'Both current password and new password are required' });
   }
 
   try {
-    let actualPassword = 'gk2026';
+    let actualPassword = owner === 'lm' ? 'lm2026' : 'gk2026';
+    const key = `password_${owner}`;
     let settingDoc = null;
 
     if (dbConnected) {
-      settingDoc = await AdminSetting.findOne({ key: 'admin_password' });
-      if (settingDoc) {
-        actualPassword = settingDoc.value;
+      // GK Password fallback to legacy key 'admin_password'
+      if (owner === 'gk') {
+        const legacySetting = await AdminSetting.findOne({ key: 'admin_password' });
+        const gkSetting = await AdminSetting.findOne({ key: 'password_gk' });
+        if (gkSetting) {
+          settingDoc = gkSetting;
+          actualPassword = gkSetting.value;
+        } else if (legacySetting) {
+          settingDoc = legacySetting;
+          actualPassword = legacySetting.value;
+        }
+      } else {
+        settingDoc = await AdminSetting.findOne({ key });
+        if (settingDoc) {
+          actualPassword = settingDoc.value;
+        }
       }
     }
 
@@ -398,7 +541,7 @@ app.post('/api/admin/change-password', async (req, res) => {
         settingDoc.value = newPassword;
         await settingDoc.save();
       } else {
-        await AdminSetting.create({ key: 'admin_password', value: newPassword });
+        await AdminSetting.create({ key, value: newPassword });
       }
       res.json({ success: true, message: 'Password changed successfully in database.' });
     } else {

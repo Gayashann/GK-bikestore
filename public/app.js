@@ -156,7 +156,8 @@ function renderPublicShowroom() {
     const plateFormatted = bike.numberPlate || 'N/A';
     
     // WhatsApp URL build
-    const cleanedPhone = (profileData.phone || '+94 77 123 4567').replace(/[^0-9+]/g, '');
+    const phoneToUse = bike.ownerPhone || profileData.phone || '+94 77 123 4567';
+    const cleanedPhone = phoneToUse.replace(/[^0-9+]/g, '');
     const waText = encodeURIComponent(`Hi, I am interested in buying your motorcycle: ${bikeTitle} (Plate: ${plateFormatted}) listed on your showroom for ${priceFormatted}. Please let me know its availability for inspection!`);
     const waLink = `https://wa.me/${cleanedPhone}?text=${waText}`;
 

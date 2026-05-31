@@ -1,5 +1,19 @@
 // GK Bike Store - Dedicated Owner Administration & Analytics Controller
 
+// Intercept all API calls to automatically inject the logged-in owner's parameter
+const originalFetch = window.fetch;
+window.fetch = function (url, options) {
+  // Only intercept relative API paths or our specific endpoints
+  if (typeof url === 'string' && url.startsWith('/api/') && !url.includes('/api/admin/login')) {
+    const owner = sessionStorage.getItem('gk_admin_owner') || 'gk';
+    
+    // Add owner query parameter
+    const separator = url.includes('?') ? '&' : '?';
+    url = `${url}${separator}owner=${owner}`;
+  }
+  return originalFetch(url, options);
+};
+
 // State Management
 let bikes = [];
 let analyticsSummary = {};
@@ -22,6 +36,7 @@ let profileData = {
   avatar: 'sports'
 };
 let selectedProfileAvatar = 'sports';
+
 
 // Preset SVGs for standard bike types
 const presetAvatars = [
@@ -48,8 +63,8 @@ const presetAvatars = [
 ];
 
 // Document Load Listener
-document.addEventListener('DOMContentLoaded', () => {
-  initProfileSettings();
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadProfileFromDB();
   checkLoginState();
   initBlurTextAnimations();
   renderPresetAvatars();
@@ -1079,6 +1094,12 @@ function checkLoginState() {
     if (mainLayout) {
       mainLayout.classList.remove('opacity-0');
       mainLayout.classList.add('opacity-100');
+      
+      // Load owner-specific profile and then reload bikes list/analytics data
+      loadProfileFromDB().then(() => {
+        fetchData();
+      });
+
       // Trigger animations
       setTimeout(() => {
         initBlurTextAnimations();
@@ -1119,6 +1140,7 @@ async function handleLogin(event) {
       // Use sessionStorage — clears automatically when browser/tab closes
       sessionStorage.setItem('gk_store_logged_in', 'true');
       sessionStorage.setItem('gk_admin_token', data.token);
+      sessionStorage.setItem('gk_admin_owner', data.owner || 'gk');
       // Remove any stale localStorage flag from old versions
       localStorage.removeItem('gk_store_logged_in');
       localStorage.removeItem('gk_admin_token');
@@ -1134,6 +1156,13 @@ async function handleLogin(event) {
     if (pass === localPass) {
       errorBox.classList.add('hidden');
       sessionStorage.setItem('gk_store_logged_in', 'true');
+      sessionStorage.setItem('gk_admin_owner', 'gk');
+      localStorage.removeItem('gk_store_logged_in');
+      checkLoginState();
+    } else if (pass === 'lm2026') {
+      errorBox.classList.add('hidden');
+      sessionStorage.setItem('gk_store_logged_in', 'true');
+      sessionStorage.setItem('gk_admin_owner', 'lm');
       localStorage.removeItem('gk_store_logged_in');
       checkLoginState();
     } else {
@@ -1147,6 +1176,24 @@ async function handleLogin(event) {
   }
 }
 
+// Profile Settings database loading
+async function loadProfileFromDB() {
+  try {
+    const owner = sessionStorage.getItem('gk_admin_owner') || 'gk';
+    const res = await fetch(`/api/profile?owner=${owner}`);
+    if (res.ok) {
+      profileData = await res.json();
+    }
+  } catch (error) {
+    console.warn('Error loading profile from DB, using fallback local storage:', error);
+    const savedData = localStorage.getItem('gk_profile_data');
+    if (savedData) {
+      profileData = JSON.parse(savedData);
+    }
+  }
+  initProfileSettings();
+}
+
 // Profile Settings customization
 function initProfileSettings() {
   // Migrate old default password gk123 → gk2026
@@ -1158,21 +1205,14 @@ function initProfileSettings() {
     localStorage.setItem('gk_store_username', 'admin');
   }
 
-  const savedData = localStorage.getItem('gk_profile_data');
-  if (savedData) {
-    profileData = JSON.parse(savedData);
-  } else {
-    localStorage.setItem('gk_profile_data', JSON.stringify(profileData));
-  }
-
   selectedProfileAvatar = profileData.avatar || 'sports';
 
   // Populate profiles
-  document.getElementById('prof-name').value = profileData.name;
-  document.getElementById('prof-business').value = profileData.business;
-  document.getElementById('prof-phone').value = profileData.phone;
-  document.getElementById('prof-email').value = profileData.email;
-  document.getElementById('prof-address').value = profileData.address;
+  document.getElementById('prof-name').value = profileData.name || '';
+  document.getElementById('prof-business').value = profileData.business || '';
+  document.getElementById('prof-phone').value = profileData.phone || '';
+  document.getElementById('prof-email').value = profileData.email || '';
+  document.getElementById('prof-address').value = profileData.address || '';
 
   // Populate username field in credentials form
   const usernameInput = document.getElementById('cred-username');
@@ -1199,11 +1239,11 @@ function initProfileSettings() {
     loginTitle.dataset.initialized = 'false';
   }
 
-  document.getElementById('profile-card-name').innerText = profileData.name;
-  document.getElementById('profile-card-role').innerText = `${profileData.business} Proprietor`;
-  document.getElementById('profile-card-phone').innerText = profileData.phone;
-  document.getElementById('profile-card-email').innerText = profileData.email;
-  document.getElementById('profile-card-address').innerText = profileData.address;
+  document.getElementById('profile-card-name').innerText = profileData.name || 'Owner';
+  document.getElementById('profile-card-role').innerText = `${profileData.business || 'Bike Store'} Proprietor`;
+  document.getElementById('profile-card-phone').innerText = profileData.phone || '+94 77 123 4567';
+  document.getElementById('profile-card-email').innerText = profileData.email || 'owner@gkbikestore.com';
+  document.getElementById('profile-card-address').innerText = profileData.address || 'Colombo, Sri Lanka';
 
   const profileAvatarDisplay = document.getElementById('profile-avatar-display');
   if (profileAvatarDisplay) {
@@ -1219,7 +1259,7 @@ function selectProfileAvatar(id) {
   if (btn) btn.classList.add('selected');
 }
 
-function saveProfile(event) {
+async function saveProfile(event) {
   event.preventDefault();
 
   profileData = {
@@ -1231,9 +1271,25 @@ function saveProfile(event) {
     avatar: selectedProfileAvatar
   };
 
-  localStorage.setItem('gk_profile_data', JSON.stringify(profileData));
-  initProfileSettings();
-  alert('GK Portal Profile updated successfully! All titles and cards have been synchronized.');
+  const owner = sessionStorage.getItem('gk_admin_owner') || 'gk';
+  try {
+    const res = await fetch(`/api/profile?owner=${owner}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(profileData)
+    });
+    if (res.ok) {
+      localStorage.setItem('gk_profile_data', JSON.stringify(profileData));
+      initProfileSettings();
+      alert('GK Portal Profile updated successfully on DB! All titles and cards have been synchronized.');
+    } else {
+      throw new Error('Failed to save profile to database');
+    }
+  } catch (error) {
+    localStorage.setItem('gk_profile_data', JSON.stringify(profileData));
+    initProfileSettings();
+    alert('GK Portal Profile updated locally! (Database sync offline).');
+  }
 }
 
 // Change credentials via server API

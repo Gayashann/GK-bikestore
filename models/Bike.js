@@ -14,7 +14,9 @@ const BikeSchema = new mongoose.Schema({
   saleDate: { type: Date },
   mileage: { type: Number },
   color: { type: String },
-  image: { type: String } // Base64 string or preset image filename
+  image: { type: String }, // Base64 string or preset image filename
+  owner: { type: String, default: 'gk', required: true } // 'gk' or 'lm'
 }, { timestamps: true });
 
 module.exports = mongoose.model('Bike', BikeSchema);
+
