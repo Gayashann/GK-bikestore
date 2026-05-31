@@ -1388,13 +1388,14 @@ function showToast(message, type = 'success') {
   }, 3500);
 }
 
-// Log out admin to home index
+// Log out admin and return to login screen
 function logoutOwner() {
-  if (confirm('Are you sure you want to logout of the GK Bike Store management portal?')) {
+  if (confirm('Are you sure you want to logout of the management portal?')) {
     sessionStorage.removeItem('gk_store_logged_in');
     sessionStorage.removeItem('gk_admin_token');
+    sessionStorage.removeItem('gk_admin_owner');
     localStorage.removeItem('gk_store_logged_in'); // clean up any old localStorage flag
-    window.location.href = '/';
+    checkLoginState(); // transition instantly back to the admin login view
   }
 }
 
