@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GK Bike Store | Admin Management Portal</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Custom CSS for specialized styling -->
+  <link rel="stylesheet" href="style.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            outfit: ['Outfit', 'sans-serif'],
+          },
+          colors: {
+            darkbg: '#0B0F19',
+            glass: 'rgba(17, 24, 39, 0.7)',
+            accentGreen: '#10B981',
+            accentCyan: '#06B6D4',
+            accentIndigo: '#6366F1',
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-darkbg text-slate-100 font-sans min-h-screen overflow-x-hidden p-0 m-0">
+
+  <!-- DEDICATED FULL SCREEN ADMIN LOGIN SCREEN -->
+  <div id="login-view" class="fixed inset-0 bg-darkbg/95 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-all duration-700 select-none">
+    <!-- Glassmorphic Login Box -->
+    <div class="relative max-w-md w-full bg-slate-900/40 backdrop-blur-xl border border-slate-800/80 p-8 rounded-3xl shadow-2xl flex flex-col items-center text-center space-y-6 transform transition-all duration-500 scale-95">
+      <!-- Brand Logo -->
+      <div class="bg-gradient-to-tr from-accentCyan to-accentIndigo p-4 rounded-2xl shadow-xl shadow-cyan-500/20 mb-2">
+        <i class="fa-solid fa-motorcycle text-3xl text-white"></i>
+      </div>
+
+      <div>
+        <h1 class="text-3xl font-extrabold font-outfit tracking-wide bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent blur-text-animate opacity-0" id="login-title" data-delay="60" data-animate-by="chars">GK Bike Store</h1>
+        <p class="text-xs text-accentCyan uppercase tracking-widest font-bold mt-1">Management Portal</p>
+      </div>
+
+      <form onsubmit="handleLogin(event)" class="w-full space-y-4 pt-4" autocomplete="off">
+        <div class="text-left">
+          <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Admin Password</label>
+          <div class="relative">
+            <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
+            <input type="password" id="login-password" required placeholder="Enter admin password" class="w-full bg-slate-950 border border-slate-800/80 rounded-xl pl-11 pr-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-accentCyan transition duration-300">
+          </div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="login-error" class="hidden text-xs text-rose-400 font-semibold flex items-center justify-center gap-1.5 bg-rose-500/10 border border-rose-500/20 py-2 rounded-xl">
+          <i class="fa-solid fa-circle-exclamation"></i> Incorrect password. Access denied.
+        </div>
+
+        <button type="submit" class="w-full bg-gradient-to-r from-accentCyan to-accentIndigo text-white font-bold text-sm py-3 rounded-xl hover:shadow-lg hover:shadow-cyan-500/10 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]">
+          Authenticate &amp; Enter
+        </button>
+      </form>
+      
+      <div class="flex flex-col gap-2 w-full pt-2">
+        <a href="/" class="text-xs text-slate-500 hover:text-slate-300 underline transition duration-200">Return to Customer Showroom</a>
+        <p class="text-[10px] text-slate-600">Authorized personnel only &bull; Default password: <span class="text-slate-500 font-bold">gk2026</span></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN CORE DYNAMIC CONTAINER -->
+  <div id="main-layout" class="flex min-h-screen opacity-0 transition-opacity duration-1000">
+    
+    <!-- Sidebar Navigation -->
+    <aside id="admin-sidebar" class="w-72 bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 p-6 my-6 ml-6 rounded-3xl flex flex-col justify-between hidden md:flex sticky top-6 h-[calc(100vh-3rem)] z-10 shadow-2xl">
+      <div>
+        <!-- Logo -->
+        <a href="/" class="flex items-center gap-3 mb-10 px-2 group cursor-pointer" title="Back to Showroom">
+          <div class="bg-gradient-to-tr from-accentCyan to-accentIndigo p-2.5 rounded-xl shadow-lg shadow-cyan-500/20 group-hover:shadow-cyan-500/40 group-hover:scale-105 transition-all duration-300">
+            <i class="fa-solid fa-motorcycle text-xl text-white"></i>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold font-outfit tracking-wide bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent group-hover:to-white transition-all duration-300">GK Bike Store</h1>
+            <span class="text-xs font-semibold uppercase tracking-widest text-accentCyan">Analytics Engine</span>
+          </div>
+        </a>
+
+        <!-- Navigation Links -->
+        <nav class="space-y-1.5">
+          <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn active flex items-center gap-4 w-full py-3.5 px-4 rounded-xl text-sm font-medium transition-all duration-300">
+            <i class="fa-solid fa-chart-line text-lg w-6 text-center"></i>
+            <span>Dashboard</span>
+          </button>
+          <button onclick="switchTab('inventory')" id="nav-inventory" class="nav-btn flex items-center gap-4 w-full py-3.5 px-4 rounded-xl text-sm font-medium transition-all duration-300">
+            <i class="fa-solid fa-boxes-stacked text-lg w-6 text-center"></i>
+            <span>Bike Inventory</span>
+          </button>
+          <button onclick="switchTab('analytics')" id="nav-analytics" class="nav-btn flex items-center gap-4 w-full py-3.5 px-4 rounded-xl text-sm font-medium transition-all duration-300">
+            <i class="fa-solid fa-wallet text-lg w-6 text-center"></i>
+            <span>Profit Analytics</span>
+          </button>
+          <button onclick="switchTab('profile')" id="nav-profile" class="nav-btn flex items-center gap-4 w-full py-3.5 px-4 rounded-xl text-sm font-medium transition-all duration-300">
+            <i class="fa-solid fa-user-gear text-lg w-6 text-center"></i>
+            <span>User Profile</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Quick Summary Footer in Sidebar -->
+      <div class="border-t border-slate-800/80 pt-6">
+        <div class="bg-slate-900/60 rounded-xl p-4 border border-slate-800/40">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs text-slate-400">Total Net Profit</span>
+            <span id="sidebar-profit-pill" class="text-xs font-bold text-emerald-400 px-2 py-0.5 bg-emerald-500/10 rounded-full">Rs. 0</span>
+          </div>
+          <p id="sidebar-net-profit" class="text-lg font-bold font-outfit text-white">Rs. 0.00</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Mobile Nav Bar (Bottom Dock) -->
+    <nav id="mobile-admin-nav" class="md:hidden fixed bottom-0 left-0 right-0 bg-gray-900/90 backdrop-blur-xl border-t border-slate-800/60 px-6 py-3 flex justify-around items-center z-50">
+      <button onclick="switchTab('dashboard')" id="mobile-nav-dashboard" class="flex flex-col items-center gap-1 text-slate-400 active-mobile-btn">
+        <i class="fa-solid fa-chart-line text-xl"></i>
+        <span class="text-[10px] font-medium">Dashboard</span>
+      </button>
+      <button onclick="switchTab('inventory')" id="mobile-nav-inventory" class="flex flex-col items-center gap-1 text-slate-400">
+        <i class="fa-solid fa-boxes-stacked text-xl"></i>
+        <span class="text-[10px] font-medium">Inventory</span>
+      </button>
+      <button onclick="switchTab('analytics')" id="mobile-nav-analytics" class="flex flex-col items-center gap-1 text-slate-400">
+        <i class="fa-solid fa-wallet text-xl"></i>
+        <span class="text-[10px] font-medium">Analytics</span>
+      </button>
+      <button onclick="switchTab('profile')" id="mobile-nav-profile" class="flex flex-col items-center gap-1 text-slate-400">
+        <i class="fa-solid fa-user-gear text-xl"></i>
+        <span class="text-[10px] font-medium">Profile</span>
+      </button>
+    </nav>
+
+    <!-- Content Area -->
+    <main class="flex-1 min-h-screen p-6 md:p-10 pb-24 md:pb-10 overflow-y-auto">
+      
+      <!-- Top Banner / Connection Status Warning -->
+      <div id="db-status-banner" class="hidden mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-300">
+        <div class="flex items-start gap-3">
+          <div class="bg-amber-500/20 p-2.5 rounded-xl text-amber-400 shrink-0">
+            <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+          </div>
+          <div>
+            <h4 class="text-sm font-semibold text-amber-200">Database Connection Required</h4>
+            <p class="text-xs text-slate-400 mt-0.5">App is currently unable to connect to MongoDB. Please configure your <code class="bg-black/30 px-1 py-0.5 rounded text-amber-300">.env</code> cluster settings and restart the server.</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="retryConnection()" class="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-semibold rounded-xl transition-all duration-300">
+            <i class="fa-solid fa-arrows-rotate mr-1.5"></i>Retry Connection
+          </button>
+        </div>
+      </div>
+
+      <!-- Header Section for Admin Panel -->
+      <div id="admin-header">
+        <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-10">
+          <div>
+            <h2 id="view-title" class="text-3xl font-extrabold font-outfit bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">Business Dashboard</h2>
+            <p id="view-desc" class="text-slate-400 text-sm mt-1">Real-time valuation, sales cycles, and monthly net margins.</p>
+          </div>
+          
+          <!-- Controls Header -->
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-semibold px-3 py-1.5 bg-slate-800/80 border border-slate-700/50 rounded-xl flex items-center gap-2 text-slate-300">
+              <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" id="status-dot"></span>
+              <span id="status-text">Connected</span>
+            </span>
+            <button onclick="openAddModal()" class="bg-gradient-to-r from-accentCyan to-accentIndigo text-white font-semibold text-sm px-4.5 py-2.5 rounded-xl hover:shadow-lg hover:shadow-cyan-500/10 transition-all duration-300 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98]">
+              <i class="fa-solid fa-plus"></i>
+              <span>Add Bike</span>
+            </button>
+          </div>
+        </header>
+      </div>
+
+      <!-- VIEW 1: DASHBOARD -->
+      <section id="view-dashboard" class="space-y-8 tab-content">
+        <!-- Dynamic Welcome Banner -->
+        <div class="relative overflow-hidden bg-gradient-to-br from-slate-900/50 via-slate-900/30 to-indigo-950/20 backdrop-blur-2xl border border-white/5 p-8 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-2xl">
+          <div class="absolute -right-20 -top-20 w-80 h-80 bg-accentCyan/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="absolute -left-20 -bottom-20 w-80 h-80 bg-accentIndigo/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="space-y-2 relative z-10">
+            <span class="text-xs uppercase font-extrabold tracking-widest text-accentCyan bg-accentCyan/10 px-2.5 py-1 rounded-md">Live Store Status</span>
+            <h3 id="welcome-title" class="text-2xl md:text-3xl font-extrabold font-outfit text-white leading-tight blur-text-animate opacity-0" data-delay="150" data-animate-by="words">Good Day, GK Owner!</h3>
+            <p id="welcome-message" class="text-sm text-slate-300 max-w-2xl leading-relaxed">Here is your business accounting status at a glance. All details are saved live in your cloud database.</p>
+            <div class="flex flex-wrap gap-2.5 pt-2">
+              <span id="welcome-roi-badge" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold rounded-xl"><i class="fa-solid fa-arrow-trend-up"></i>0% Profit Return</span>
+              <span id="welcome-active-badge" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-xs font-bold rounded-xl"><i class="fa-solid fa-motorcycle"></i>0 Available Stock</span>
+            </div>
+          </div>
+          <div class="hidden md:flex items-center justify-center bg-slate-900/40 p-5 rounded-3xl border border-white/5 relative z-10 shrink-0 select-none shadow-lg">
+            <i class="fa-solid fa-motorcycle text-5xl bg-gradient-to-tr from-accentCyan to-accentIndigo bg-clip-text text-transparent animate-pulse"></i>
+          </div>
+        </div>
+
+        <!-- Key Performance Indicators (KPIs) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <!-- Card 1: Total Investment -->
+          <div class="kpi-card glass-panel relative overflow-hidden p-6 rounded-3xl flex flex-col justify-between h-36 shadow-lg">
+            <div class="flex items-start justify-between">
+              <span class="text-sm font-medium text-slate-400">Total Invested</span>
+              <div class="bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-xl text-amber-400"><i class="fa-solid fa-vault"></i></div>
+            </div>
+            <div>
+              <h3 id="stat-invested" class="text-2xl font-bold font-outfit text-white">Rs. 0.00</h3>
+              <p class="text-xs text-slate-500 mt-1">Value of all purchased stock</p>
+            </div>
+            <div class="absolute -right-6 -bottom-6 text-amber-500/5 text-7xl font-bold"><i class="fa-solid fa-vault"></i></div>
+          </div>
+
+          <!-- Card 2: Total Revenue -->
+          <div class="kpi-card glass-panel relative overflow-hidden p-6 rounded-3xl flex flex-col justify-between h-36 shadow-lg">
+            <div class="flex items-start justify-between">
+              <span class="text-sm font-medium text-slate-400">Total Revenue</span>
+              <div class="bg-indigo-500/10 border border-indigo-500/20 p-2.5 rounded-xl text-indigo-400"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+            </div>
+            <div>
+              <h3 id="stat-revenue" class="text-2xl font-bold font-outfit text-white">Rs. 0.00</h3>
+              <p class="text-xs text-slate-500 mt-1">Total revenue from sales</p>
+            </div>
+            <div class="absolute -right-6 -bottom-6 text-indigo-500/5 text-7xl font-bold"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+          </div>
+
+          <!-- Card 3: Net Profit -->
+          <div class="kpi-card glass-panel relative overflow-hidden p-6 rounded-3xl flex flex-col justify-between h-36 shadow-lg bg-gradient-to-b from-slate-900/40 to-emerald-950/10">
+            <div class="flex items-start justify-between">
+              <span class="text-sm font-medium text-slate-400">Net Profit</span>
+              <div class="bg-emerald-500/10 border border-emerald-500/20 p-2.5 rounded-xl text-emerald-400"><i class="fa-solid fa-arrow-trend-up"></i></div>
+            </div>
+            <div>
+              <div class="flex items-baseline gap-2">
+                <h3 id="stat-profit" class="text-2xl font-bold font-outfit text-emerald-400">Rs. 0.00</h3>
+                <span id="stat-roi" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">0% ROI</span>
+              </div>
+              <p class="text-xs text-slate-500 mt-1">Earnings minus buying cost</p>
+            </div>
+            <div class="absolute -right-6 -bottom-6 text-emerald-500/5 text-7xl font-bold"><i class="fa-solid fa-arrow-trend-up"></i></div>
+          </div>
+
+          <!-- Card 4: Inventory Split -->
+          <div class="kpi-card glass-panel relative overflow-hidden p-6 rounded-3xl flex flex-col justify-between h-36 shadow-lg">
+            <div class="flex items-start justify-between">
+              <span class="text-sm font-medium text-slate-400">Inventory Status</span>
+              <div class="bg-cyan-500/10 border border-cyan-500/20 p-2.5 rounded-xl text-cyan-400"><i class="fa-solid fa-motorcycle"></i></div>
+            </div>
+            <div>
+              <h3 id="stat-inventory" class="text-2xl font-bold font-outfit text-white">0 Bikes</h3>
+              <p class="text-xs text-slate-500 mt-1"><span id="stat-available" class="text-emerald-400 font-semibold">0</span> Available &bull; <span id="stat-sold" class="text-indigo-400 font-semibold">0</span> Sold</p>
+            </div>
+            <div class="absolute -right-6 -bottom-6 text-cyan-500/5 text-7xl font-bold"><i class="fa-solid fa-motorcycle"></i></div>
+          </div>
+        </div>
+
+        <!-- ═══ CAPITAL POOL MANAGEMENT PANEL ═══ -->
+        <div class="relative overflow-hidden bg-gradient-to-br from-slate-900/60 via-slate-900/40 to-cyan-950/20 border border-slate-800/60 rounded-3xl p-6 shadow-2xl backdrop-blur-sm">
+          <!-- Background decorations -->
+          <div class="absolute -right-16 -top-16 w-60 h-60 bg-accentCyan/5 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="absolute -left-16 -bottom-16 w-60 h-60 bg-accentIndigo/5 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div class="relative z-10">
+            <!-- Header Row -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div>
+                <div class="flex items-center gap-2 mb-1">
+                  <i class="fa-solid fa-piggy-bank text-accentCyan text-lg"></i>
+                  <h4 class="text-lg font-bold font-outfit text-white">Capital Pool &amp; Cash Balance</h4>
+                </div>
+                <p class="text-xs text-slate-400">Track all money injected into the business and your available spending cash.</p>
+              </div>
+              <button onclick="openAddCapitalModal()" class="shrink-0 flex items-center gap-2 bg-gradient-to-r from-accentCyan to-accentIndigo text-white font-bold text-xs px-5 py-2.5 rounded-xl hover:shadow-lg hover:shadow-cyan-500/20 transition-all duration-300 hover:scale-105 active:scale-95">
+                <i class="fa-solid fa-plus"></i>
+                Add Capital
+              </button>
+            </div>
+
+            <!-- Three capital KPI mini-cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+              <!-- Total Capital Injected -->
+              <div class="bg-slate-900/50 border border-slate-800/60 rounded-2xl p-4 flex items-center gap-4">
+                <div class="bg-accentCyan/10 border border-accentCyan/20 p-3 rounded-xl shrink-0">
+                  <i class="fa-solid fa-coins text-accentCyan text-xl"></i>
+                </div>
+                <div>
+                  <p class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-0.5">Total Invested Capital</p>
+                  <h3 id="capital-total" class="text-xl font-black font-outfit text-white">Rs. 0</h3>
+                  <p class="text-[10px] text-slate-600 mt-0.5">All injections combined</p>
+                </div>
+              </div>
+              <!-- Capital Used in Bikes -->
+              <div class="bg-slate-900/50 border border-slate-800/60 rounded-2xl p-4 flex items-center gap-4">
+                <div class="bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl shrink-0">
+                  <i class="fa-solid fa-motorcycle text-amber-400 text-xl"></i>
+                </div>
+                <div>
+                  <p class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-0.5">Spent on Bikes</p>
+                  <h3 id="capital-used" class="text-xl font-black font-outfit text-amber-300">Rs. 0</h3>
+                  <p class="text-[10px] text-slate-600 mt-0.5">Total buying cost of all bikes</p>
+                </div>
+              </div>
+              <!-- Remaining Cash -->
+              <div id="capital-balance-card" class="bg-slate-900/50 border border-emerald-500/20 rounded-2xl p-4 flex items-center gap-4">
+                <div class="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl shrink-0">
+                  <i class="fa-solid fa-wallet text-emerald-400 text-xl" id="capital-balance-icon"></i>
+                </div>
+                <div>
+                  <p class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-0.5">Remaining Cash</p>
+                  <h3 id="capital-remaining" class="text-xl font-black font-outfit text-emerald-400">Rs. 0</h3>
+                  <p class="text-[10px] text-slate-600 mt-0.5">Available to spend on next bike</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cash progress bar -->
+            <div class="mb-4">
+              <div class="flex justify-between text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1.5">
+                <span>Capital Utilisation</span>
+                <span id="capital-utilisation-pct">0% Used</span>
+              </div>
+              <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
+                <div id="capital-utilisation-bar" class="h-full rounded-full bg-gradient-to-r from-accentCyan to-accentIndigo transition-all duration-1000" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- Capital injection history -->
+            <div id="capital-history-section">
+              <p class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-2">Injection History</p>
+              <div id="capital-history-list" class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                <p class="text-xs text-slate-600 italic py-2">No capital added yet. Click "Add Capital" to begin.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Analytical Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-slate-900/30 backdrop-blur-md border border-slate-800/50 rounded-3xl p-6">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <h4 class="text-lg font-bold font-outfit text-white">Monthly Profit Performance</h4>
+                <p class="text-xs text-slate-400">Analysis of month-on-month capital returns.</p>
+              </div>
+              <div class="flex items-center gap-1.5 bg-slate-800/40 p-1 rounded-lg border border-slate-700/30">
+                <button id="btn-chart-profit" class="text-xs px-3 py-1.5 rounded-md font-semibold bg-gradient-to-r from-accentCyan to-accentIndigo text-white">Profit</button>
+                <button id="btn-chart-sales" class="text-xs px-3 py-1.5 rounded-md font-semibold text-slate-400 hover:text-white transition">Volume</button>
+              </div>
+            </div>
+            <div class="h-80 w-full relative">
+              <canvas id="profitChart"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-slate-900/30 backdrop-blur-md border border-slate-800/50 rounded-3xl p-6 flex flex-col justify-between">
+            <div>
+              <h4 class="text-lg font-bold font-outfit text-white mb-4">Performance Insights</h4>
+              
+              <div class="space-y-4">
+                <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800/40">
+                  <span class="text-xs text-slate-400 block uppercase font-bold tracking-widest mb-1 text-[10px]">Capital Turnaround Rate</span>
+                  <div class="flex items-center gap-3">
+                    <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                      <div id="conversion-progress" class="bg-gradient-to-r from-accentCyan to-accentIndigo h-full rounded-full transition-all duration-1000" style="width: 0%"></div>
+                    </div>
+                    <span id="conversion-rate" class="text-sm font-bold font-outfit text-white">0%</span>
+                  </div>
+                </div>
+
+                <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800/40">
+                  <span class="text-xs text-slate-400 block uppercase font-bold tracking-widest mb-1 text-[10px]">Active Stock Value</span>
+                  <h4 id="insight-active-value" class="text-xl font-bold font-outfit text-white">Rs. 0.00</h4>
+                  <p class="text-[10px] text-slate-500 mt-1">Capital currently locked in available bikes</p>
+                </div>
+
+                <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800/40">
+                  <span class="text-xs text-slate-400 block uppercase font-bold tracking-widest mb-1 text-[10px]">Net ROI</span>
+                  <h4 id="insight-roi" class="text-xl font-bold font-outfit text-emerald-400">0%</h4>
+                  <p class="text-[10px] text-slate-500 mt-1">Return percentage relative to investment of sold bikes</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-6 border-t border-slate-800/60 mt-6 flex items-center justify-between gap-3">
+              <span class="text-xs text-slate-400">Save Backup</span>
+              <button onclick="exportData()" class="px-3.5 py-2 bg-slate-800/80 hover:bg-slate-700/60 text-slate-200 border border-slate-700/50 hover:text-white rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
+                <i class="fa-solid fa-file-export text-accentCyan"></i> Export JSON
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 2: BIKE INVENTORY -->
+      <section id="view-inventory" class="space-y-6 tab-content hidden">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/20 border border-slate-800/40 p-4 rounded-2xl backdrop-blur-sm">
+          <div class="relative flex-1 max-w-md">
+            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
+            <input type="text" id="inventory-search" oninput="debounceFilter()" placeholder="Search model, number plate..." class="w-full bg-slate-900/60 border border-slate-800/80 rounded-xl pl-11 pr-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-accentCyan transition duration-300">
+          </div>
+          <div class="flex items-center gap-2 overflow-x-auto self-start md:self-auto py-1">
+            <button onclick="filterStatus('All')" id="filter-all" class="filter-tab active font-semibold text-xs px-4 py-2 rounded-xl transition duration-300 shrink-0">All Stock</button>
+            <button onclick="filterStatus('Available')" id="filter-available" class="filter-tab font-semibold text-xs px-4 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/30 transition duration-300 shrink-0">Available</button>
+            <button onclick="filterStatus('Sold')" id="filter-sold" class="filter-tab font-semibold text-xs px-4 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/30 transition duration-300 shrink-0">Sold</button>
+          </div>
+        </div>
+
+        <div id="bike-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Dynamically populated -->
+        </div>
+
+        <div id="inventory-empty-state" class="hidden flex-col items-center justify-center py-16 text-center">
+          <div class="bg-slate-800/30 text-slate-500 p-6 rounded-full mb-4">
+            <i class="fa-solid fa-motorcycle text-4xl"></i>
+          </div>
+          <h4 class="text-lg font-bold font-outfit text-white">No bikes found</h4>
+          <p class="text-sm text-slate-400 max-w-sm mt-1">Start by adding your first motorcycle or modify your search filters.</p>
+          <button onclick="openAddModal()" class="mt-4.5 bg-gradient-to-r from-accentCyan to-accentIndigo text-white font-semibold text-sm px-4.5 py-2.5 rounded-xl hover:shadow-lg hover:shadow-cyan-500/10 transition duration-300 flex items-center gap-2">
+            <i class="fa-solid fa-plus"></i>Add Bike
+          </button>
+        </div>
+      </section>
+
+      <!-- VIEW 3: ANALYTICS -->
+      <section id="view-analytics" class="space-y-8 tab-content hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="bg-slate-900/30 border border-slate-800/50 rounded-3xl p-6 lg:col-span-2">
+            <h4 class="text-lg font-bold font-outfit text-white mb-2">Investment vs. Returns</h4>
+            <p class="text-xs text-slate-400 mb-6">Compare purchase capital spent against sales revenues month-by-month.</p>
+            <div class="h-80 w-full">
+              <canvas id="comparisonChart"></canvas>
+            </div>
+          </div>
+          
+          <div class="bg-slate-900/30 border border-slate-800/50 rounded-3xl p-6 flex flex-col justify-between">
+            <div>
+              <h4 class="text-lg font-bold font-outfit text-white mb-4">Business Health Check</h4>
+              
+              <div class="space-y-4.5">
+                <div class="flex justify-between items-center py-3 border-b border-slate-800/60">
+                  <span class="text-xs text-slate-400">Total Purchase Capital</span>
+                  <span id="health-invest" class="text-sm font-bold font-outfit text-white">Rs. 0.00</span>
+                </div>
+                <div class="flex justify-between items-center py-3 border-b border-slate-800/60">
+                  <span class="text-xs text-slate-400">Total Revenue Collected</span>
+                  <span id="health-revenue" class="text-sm font-bold font-outfit text-white">Rs. 0.00</span>
+                </div>
+                <div class="flex justify-between items-center py-3 border-b border-slate-800/60">
+                  <span class="text-xs text-slate-400">Net Business Profit</span>
+                  <span id="health-profit" class="text-sm font-bold font-outfit text-emerald-400">Rs. 0.00</span>
+                </div>
+                <div class="flex justify-between items-center py-3">
+                  <span class="text-xs text-slate-400">Overall Profit Margin</span>
+                  <span id="health-margin" class="text-sm font-bold font-outfit text-accentCyan">0%</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-accentCyan/5 border border-accentCyan/20 rounded-xl p-4.5">
+              <p class="text-xs text-slate-300 leading-relaxed"><i class="fa-solid fa-lightbulb text-accentCyan mr-2"></i><strong>Smart Recommendation:</strong> Keep your purchase-to-sale cycle below 30 days to maximize ROI and free up liquid investment capital.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monthly Financial Table -->
+        <div class="bg-slate-900/30 border border-slate-800/50 rounded-3xl overflow-hidden">
+          <div class="p-6 border-b border-slate-800/60">
+            <h4 class="text-lg font-bold font-outfit text-white">Month-on-Month Accounting Summary</h4>
+            <p class="text-xs text-slate-400 mt-0.5">Audited numbers grouped by bike sale dates.</p>
+          </div>
+          
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-900/80 border-b border-slate-800/60 text-xs text-slate-400 uppercase tracking-widest font-bold">
+                  <th class="py-4 px-6">Month</th>
+                  <th class="py-4 px-6 text-center">Bikes Sold</th>
+                  <th class="py-4 px-6 text-right">Invested Cost (A)</th>
+                  <th class="py-4 px-6 text-right">Sale Revenue (B)</th>
+                  <th class="py-4 px-6 text-right">Net Profit (B - A)</th>
+                  <th class="py-4 px-6 text-right">Margin (%)</th>
+                </tr>
+              </thead>
+              <tbody id="accounting-table-rows" class="text-sm divide-y divide-slate-800/40">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 4: USER PROFILE -->
+      <section id="view-profile" class="space-y-8 tab-content hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          <!-- Owner Card -->
+          <div class="bg-slate-900/30 border border-slate-800/50 rounded-3xl p-6 flex flex-col items-center text-center space-y-6 backdrop-blur-sm">
+            <div class="relative">
+              <div class="absolute inset-0 bg-gradient-to-tr from-accentCyan to-accentIndigo rounded-full blur opacity-40 pulse-glow"></div>
+              <div id="profile-avatar-display" class="relative w-32 h-32 bg-slate-950 rounded-full border-2 border-slate-800 flex items-center justify-center overflow-hidden shadow-inner">
+                <!-- SVG Avatar displayed dynamically -->
+              </div>
+            </div>
+
+            <div class="space-y-1">
+              <h3 id="profile-card-name" class="text-2xl font-bold font-outfit text-white">GK Owner</h3>
+              <p id="profile-card-role" class="text-xs text-accentCyan font-bold uppercase tracking-wider">Proprietor</p>
+              <div class="pt-2 flex justify-center gap-1.5 text-xs text-slate-400">
+                <span class="px-2.5 py-1 bg-slate-800/60 rounded-full border border-slate-800"><i class="fa-solid fa-store mr-1 text-slate-500"></i>Active Store</span>
+              </div>
+            </div>
+
+            <div class="w-full space-y-3.5 pt-4 text-left border-t border-slate-800/80">
+              <div class="flex items-center gap-3">
+                <div class="bg-slate-800/60 p-2 rounded-xl text-slate-400 shrink-0"><i class="fa-solid fa-phone text-xs"></i></div>
+                <div class="overflow-hidden">
+                  <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">Phone Number</span>
+                  <span id="profile-card-phone" class="text-xs text-slate-300 font-semibold truncate block">+94 77 123 4567</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="bg-slate-800/60 p-2 rounded-xl text-slate-400 shrink-0"><i class="fa-solid fa-envelope text-xs"></i></div>
+                <div class="overflow-hidden">
+                  <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">Email Address</span>
+                  <span id="profile-card-email" class="text-xs text-slate-300 font-semibold truncate block">owner@gkbikestore.com</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="bg-slate-800/60 p-2 rounded-xl text-slate-400 shrink-0"><i class="fa-solid fa-location-dot text-xs"></i></div>
+                <div class="overflow-hidden">
+                  <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">Store Address</span>
+                  <span id="profile-card-address" class="text-xs text-slate-300 font-semibold truncate block">Colombo, Sri Lanka</span>
+                </div>
+              </div>
+            </div>
+
+            <button onclick="logoutOwner()" class="w-full mt-4 py-2.5 bg-slate-850 hover:bg-rose-950/20 text-slate-300 hover:text-rose-400 border border-slate-700/50 hover:border-rose-900/30 font-semibold rounded-xl text-xs transition duration-300 flex items-center justify-center gap-2">
+              <i class="fa-solid fa-right-from-bracket"></i> Logout Portal
+            </button>
+          </div>
+
+          <!-- Settings Forms -->
+          <div class="lg:col-span-2 space-y-6">
+            <!-- Profile Editing -->
+            <div class="bg-slate-900/30 border border-slate-800/50 rounded-3xl p-6 backdrop-blur-sm">
+              <h4 class="text-lg font-bold font-outfit text-white mb-2">Edit Store Owner Details</h4>
+              <p class="text-xs text-slate-400 mb-6">Customize personal information, store headings and profile preset images.</p>
+
+              <form onsubmit="saveProfile(event)" class="space-y-4" autocomplete="off">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-2">Owner Name *</label>
+                    <input type="text" id="prof-name" required placeholder="GK Owner" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accentCyan transition text-white">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-2">Business Name *</label>
+                    <input type="text" id="prof-business" required placeholder="GK Bike Store" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accentCyan transition text-white">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-2">Contact Phone (WhatsApp) *</label>
+                    <input type="text" id="prof-phone" required placeholder="+94 77 123 4567" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accentCyan transition text-white">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-2">Contact Email *</label>
+                    <input type="email" id="prof-email" required placeholder="owner@gkbikestore.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accentCyan transition text-white">
+                  </div>
+                  <div class="sm:col-span-2">
+                    <label class="block text-xs font-semibold text-slate-400 mb-2">Store Address</label>
+                    <input type="text" id="prof-address" placeholder="Colombo, Sri Lanka" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accentCyan transition text-white">
+                  </div>
+                </div>
+
+                <!-- Custom Avatar Picker -->
+                <div class="pt-4">
+                  <span class="block text-xs font-semibold text-slate-400 mb-2">Choose Avatar / Icon</span>
+                  <div class="grid grid-cols-4 sm:grid-cols-6 gap-3" id="profile-avatars-list">
+                    <!-- Loaded dynamically via js -->
+                  </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-800/80 flex justify-end">
+                  <button type="submit" class="bg-gradient-to-r from-accentCyan to-accentIndigo text-white font-bold text-xs px-5 py-2.5 rounded-xl hover:shadow-lg hover:shadow-cyan-500/10 transition duration-300">
+                    Save Profile Settings
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Credentials Editing -->
+            <div class="bg-slate-900/30 border border-slate-800/50 rounded-3xl p-6 backdrop-blur-sm">
+              <h4 class="text-lg font-bold font-outfit text-white mb-2">Change Portal Login Credentials</h4>
+              <p class="text-xs text-slate-400 mb-6">Modify the default administrative username and portal access password.</p>
+
+              <form onsubmit="changeCredentials(event)" class="space-y-4" autocomplete="off">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-2">New Username *</label>
+                    <input type="text" id="cred-username" required placeholder="New username" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accentCyan transition text-white">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-2">Current Password (To Authorize) *</label>
+                    <input type="password" id="cred-current-pass" required placeholder="Verify current password" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accentCyan transition text-white">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-2">New Password * <span class="text-[10px] text-slate-500">(Leave blank to keep current)</span></label>
+                    <input type="password" id="cred-new-pass" placeholder="New password" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accentCyan transition text-white">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-2">Confirm New Password *</label>
+                    <input type="password" id="cred-confirm-pass" placeholder="Confirm password" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accentCyan transition text-white">
+                  </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-800/80 flex justify-end">
+                  <button type="submit" class="bg-gradient-to-r from-accentCyan to-accentIndigo text-white font-bold text-xs px-5 py-2.5 rounded-xl hover:shadow-lg hover:shadow-cyan-500/10 transition duration-300">
+                    Update Credentials
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ADD / EDIT BIKE MODAL -->
+  <div id="add-bike-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-40 hidden transition-opacity duration-300 opacity-0">
+    <div class="bg-slate-900 border border-slate-800/80 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl transition-transform duration-300 scale-95">
+      
+      <!-- Modal Header -->
+      <div class="p-6 border-b border-slate-800/80 flex items-center justify-between sticky top-0 bg-slate-900 z-10">
+        <div>
+          <h3 id="modal-title" class="text-xl font-bold font-outfit text-white">Add New Bike</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Fill in purchase details. Photos will be saved securely.</p>
+        </div>
+        <button onclick="closeAddModal()" class="text-slate-400 hover:text-white p-2.5 rounded-lg hover:bg-slate-800/40 transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Modal Form Body -->
+      <form id="bike-form" onsubmit="saveBike(event)" autocomplete="off" class="p-6 space-y-6">
+        <input type="hidden" id="bike-id">
+        
+        <!-- Basic Specifications -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4.5">
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-semibold text-slate-400 mb-2">Bike Name & Model *</label>
+            <input type="text" id="bike-model" required placeholder="e.g. Honda Hornet 160R, Yamaha FZ-S" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accentCyan transition text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-2">Number Plate Number *</label>
+            <input type="text" id="bike-plate" required placeholder="e.g. WP BHM-8899, CP LH-1234" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accentCyan transition text-white uppercase font-bold tracking-wide">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-2">Buying Price (Rs.) * <span class="text-[9px] text-slate-500">(Private Admin Cost)</span></label>
+            <div class="relative">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">Rs.</span>
+              <input type="number" id="bike-buyprice" required placeholder="0.00" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-12 pr-4 py-2.5 text-sm focus:outline-none focus:border-accentCyan transition text-white font-bold">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-2">Public Asking Price (Rs.) * <span class="text-[9px] text-accentCyan">(Shown on Home Page)</span></label>
+            <div class="relative">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">Rs.</span>
+              <input type="number" id="bike-askingprice" required placeholder="0.00" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-12 pr-4 py-2.5 text-sm focus:outline-none focus:border-accentCyan transition text-white font-bold">
+            </div>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-semibold text-slate-400 mb-2">Purchase Date *</label>
+            <input type="date" id="bike-buydate" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accentCyan transition text-slate-200">
+          </div>
+        </div>
+
+        <!-- Preset Avatars list -->
+        <div class="border-t border-slate-800/80 pt-6">
+          <label class="block text-xs font-semibold text-slate-400 mb-2">Or Choose Preset Bike Template</label>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5" id="preset-avatars">
+            <!-- Loaded dynamically via js -->
+          </div>
+        </div>
+
+        <!-- Custom Photo Upload -->
+        <div class="border-t border-slate-800/80 pt-6">
+          <label class="block text-xs font-semibold text-slate-400 mb-2">Bike Image / Custom Photo</label>
+          <div class="flex flex-col sm:flex-row gap-6 items-center">
+            <div id="image-preview" class="w-full sm:w-44 h-28 bg-slate-950 border border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center overflow-hidden shrink-0 text-slate-500">
+              <i class="fa-solid fa-image text-2xl mb-1"></i>
+              <span class="text-[10px]">No Photo</span>
+            </div>
+            
+            <div class="flex-1 w-full space-y-4">
+              <div>
+                <input type="file" id="bike-image-file" accept="image/*" onchange="previewFileImage(this)" class="hidden">
+                <button type="button" onclick="document.getElementById('bike-image-file').click()" class="w-full bg-slate-800/80 hover:bg-slate-700/60 text-slate-200 border border-slate-700/50 hover:text-white rounded-xl px-4 py-2.5 text-xs font-semibold transition flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-cloud-arrow-up text-accentCyan"></i> Upload Custom Photo
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="border-t border-slate-800/80 pt-6 flex items-center justify-end gap-3">
+          <button type="button" onclick="closeAddModal()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-sm transition">Cancel</button>
+          <button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-accentCyan to-accentIndigo text-white font-semibold rounded-xl text-sm hover:shadow-lg hover:shadow-cyan-500/10 transition">Save Bike Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SELL BIKE MODAL -->
+  <div id="sell-bike-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-40 hidden transition-opacity duration-300 opacity-0">
+    <div class="bg-slate-900 border border-slate-800/80 rounded-2xl max-w-md w-full shadow-2xl transition-transform duration-300 scale-95">
+      
+      <!-- Modal Header -->
+      <div class="p-6 border-b border-slate-800/80 flex items-center justify-between">
+        <div>
+          <h3 class="text-xl font-bold font-outfit text-white">Record Sale</h3>
+          <p id="sell-bike-desc" class="text-xs text-slate-400 mt-0.5">Finalize sales price and confirm transaction profit.</p>
+        </div>
+        <button onclick="closeSellModal()" class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800/40 transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Form Body -->
+      <form id="sell-form" onsubmit="saveSale(event)" autocomplete="off" class="p-6 space-y-6">
+        <input type="hidden" id="sell-bike-id">
+        
+        <!-- Summary card -->
+        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+          <span class="text-[10px] text-slate-500 block uppercase font-bold tracking-widest mb-1">Purchased Details</span>
+          <div class="flex items-center justify-between">
+            <h4 id="sell-bike-summary-title" class="text-sm font-semibold text-white">Honda Hornet</h4>
+            <span id="sell-bike-summary-buyprice" class="text-sm font-bold text-slate-300">Rs. 450,000.00</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-2">Actual Selling Price (Rs.) *</label>
+          <div class="relative">
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">Rs.</span>
+            <input type="number" id="sell-price" required placeholder="0.00" oninput="calculateInstantProfit()" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-12 pr-4 py-2.5 text-sm focus:outline-none focus:border-accentCyan transition text-white font-bold">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-2">Sale Date *</label>
+          <input type="date" id="sell-date" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accentCyan transition text-slate-200">
+        </div>
+
+        <!-- Profit Calculator Output -->
+        <div class="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl flex items-center justify-between">
+          <span class="text-xs text-emerald-400 font-semibold flex items-center gap-1.5"><i class="fa-solid fa-arrow-trend-up"></i>Estimated Profit</span>
+          <span id="sell-calculated-profit" class="text-md font-bold font-outfit text-emerald-400">Rs. 0.00</span>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="border-t border-slate-800/80 pt-6 flex items-center justify-end gap-3">
+          <button type="button" onclick="closeSellModal()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-sm transition">Cancel</button>
+          <button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-accentGreen to-emerald-600 text-white font-semibold rounded-xl text-sm hover:shadow-lg hover:shadow-emerald-500/10 transition">Finalize Sale</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══ ADD CAPITAL MODAL ═══ -->
+  <div id="add-capital-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-40 hidden transition-opacity duration-300 opacity-0">
+    <div class="bg-slate-900 border border-slate-800/80 rounded-2xl max-w-md w-full shadow-2xl transition-transform duration-300 scale-95">
+
+      <!-- Modal Header -->
+      <div class="p-6 border-b border-slate-800/80 flex items-center justify-between">
+        <div>
+          <h3 id="capital-modal-title" class="text-xl font-bold font-outfit text-white flex items-center gap-2">
+            <i class="fa-solid fa-piggy-bank text-accentCyan"></i> Add Capital Injection
+          </h3>
+          <p id="capital-modal-subtitle" class="text-xs text-slate-400 mt-0.5">Inject new funds into the business capital pool.</p>
+        </div>
+        <button onclick="closeAddCapitalModal()" class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800/40 transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Modal Form -->
+      <form onsubmit="submitCapital(event)" autocomplete="off" class="p-6 space-y-5">
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-2">Amount (Rs.) *</label>
+          <div class="relative">
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">Rs.</span>
+            <input type="number" id="capital-amount" required min="1" placeholder="e.g. 500000"
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-12 pr-4 py-3 text-lg font-bold focus:outline-none focus:border-accentCyan transition text-white">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-2">Note / Label <span class="text-slate-600">(Optional)</span></label>
+          <input type="text" id="capital-note" placeholder="e.g. Initial investment from Lakindu"
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accentCyan transition text-white">
+        </div>
+
+        <!-- Error -->
+        <div id="capital-modal-error" class="hidden text-xs text-rose-400 font-semibold flex items-center gap-1.5 bg-rose-500/10 border border-rose-500/20 px-4 py-2.5 rounded-xl">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <span id="capital-modal-error-text">Something went wrong.</span>
+        </div>
+
+        <!-- Buttons -->
+        <div class="pt-2 border-t border-slate-800/80 flex items-center justify-end gap-3">
+          <button type="button" onclick="closeAddCapitalModal()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-sm transition">Cancel</button>
+          <button type="submit" id="capital-submit-btn" class="px-6 py-2.5 bg-gradient-to-r from-accentCyan to-accentIndigo text-white font-bold rounded-xl text-sm hover:shadow-lg hover:shadow-cyan-500/20 transition flex items-center gap-2">
+            <i class="fa-solid fa-plus"></i> Add to Pool
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="light-rays.js"></script>
+  <script src="admin-app.js"></script>
+</body>
+</html>
