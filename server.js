@@ -219,11 +219,11 @@ app.get('/api/analytics', async (req, res) => {
     // Capital pool calculation
     const capitalEntries = await CapitalEntry.find({ owner }).sort({ addedAt: -1 });
     const totalCapitalAdded = capitalEntries.reduce((s, e) => s + e.amount, 0);
-    const totalBuyingCostAllBikes = bikes.reduce((s, b) => s + (b.buyingPrice || 0), 0);
+    const activeBikesBuyingCost = bikes.filter(b => b.status === 'Available').reduce((s, b) => s + (b.buyingPrice || 0), 0);
     const capitalSummary = {
       totalCapital: totalCapitalAdded,
-      capitalUsed: totalBuyingCostAllBikes,
-      remainingCash: totalCapitalAdded - totalBuyingCostAllBikes,
+      capitalUsed: activeBikesBuyingCost,
+      remainingCash: totalCapitalAdded - activeBikesBuyingCost,
       entries: capitalEntries
     };
     
@@ -327,7 +327,7 @@ app.get('/api/capital', async (req, res) => {
     const entries = await CapitalEntry.find({ owner }).sort({ addedAt: -1 });
     const bikes = await Bike.find({ owner });
     const totalCapital = entries.reduce((s, e) => s + e.amount, 0);
-    const capitalUsed = bikes.reduce((s, b) => s + (b.buyingPrice || 0), 0);
+    const capitalUsed = bikes.filter(b => b.status === 'Available').reduce((s, b) => s + (b.buyingPrice || 0), 0);
     const remainingCash = totalCapital - capitalUsed;
     res.json({ totalCapital, capitalUsed, remainingCash, entries });
   } catch (err) {
